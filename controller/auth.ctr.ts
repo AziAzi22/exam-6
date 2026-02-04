@@ -20,7 +20,8 @@ import type {
   ResendOTPDTO,
   VerifyDTO,
 } from "../dto/auth.dto.js";
-import { Op } from "sequelize";
+import { Op, ValidationError } from "sequelize";
+import type { ValidationResult } from "joi";
 
 Auth.sync({ force: false });
 
@@ -32,13 +33,14 @@ export const register = async (
   next: NextFunction,
 ): Promise<Response | void> => {
   try {
-    const { error, value } = await RegisterValidator(req.body);
+    const result: ValidationResult = await RegisterValidator(req.body);
 
-    if (error) {
-      return res.status(400).json({ message: error.message });
+    if (result.error) {
+      throw CustomErrorHandler.BadRequest(result.error.message);
     }
 
-    const { username, email, password, birth_year } = value.body as RegisterDTO;
+    const { username, email, password, birth_year } =
+      result.value as RegisterDTO;
 
     const exists = await Auth.findOne({
       where: {
@@ -61,7 +63,7 @@ export const register = async (
     const time = Date.now() + 5 * 60 * 1000;
 
     await Auth.create({
-      picture: "/images/default_photo_for_profile.png",
+      userpic: "/images/default_photo_for_profile.png",
       username,
       email,
       password: hash,
@@ -74,10 +76,14 @@ export const register = async (
 
     logger.info(`user registered with email: ${email}`);
 
-    return res.status(201).json({
+    res.status(201).json({
       message: "you are registred ✌️",
     });
   } catch (error: unknown) {
+    if (error instanceof ValidationError) {
+      throw CustomErrorHandler.BadRequest(error.message);
+    }
+
     const message = error instanceof Error ? error.message : String(error);
 
     logger.error("Register error: " + message);
@@ -94,13 +100,13 @@ export const verify = async (
   next: NextFunction,
 ): Promise<Response | void> => {
   try {
-    const { error, value } = await VerifyValidator(req.body);
+    const result: ValidationResult = await VerifyValidator(req.body);
 
-    if (error) {
-      return res.status(400).json({ message: error.message });
+    if (result.error) {
+      throw CustomErrorHandler.BadRequest(result.error.message);
     }
 
-    const { email, otp } = value.body as VerifyDTO;
+    const { email, otp } = result.value as VerifyDTO;
 
     const foundedUser = await Auth.findOne({ where: { email: email } });
 
@@ -116,28 +122,29 @@ export const verify = async (
 
     const time = Date.now();
 
-    if (time > foundedUser.otpTime) {
+    if (time > foundedUser.dataValues.otpTime) {
       logger.warn(`Verification attempt with expired OTP: ${email}`);
 
       throw CustomErrorHandler.BadRequest("OTP time expired");
     }
 
-    if (otp !== foundedUser.otp) {
+    if (otp !== foundedUser.dataValues.otp) {
       logger.warn(`Verification attempt with wrong OTP: ${email}`);
 
       throw CustomErrorHandler.BadRequest("wrong verification code");
     }
 
-    await Auth.update(
-      { isVerified: true, otp: null, otpTime: null },
-      { where: { id: foundedUser.id } },
-    );
+    foundedUser.isVerified = true;
+    foundedUser.otp = null;
+    foundedUser.otpTime = null;
+
+    await foundedUser.save();
 
     const payload = {
       username: foundedUser.username,
-      email: foundedUser.email,
-      role: foundedUser.role,
-      id: foundedUser.id,
+      email: foundedUser.dataValues.dataValues.email,
+      role: foundedUser.dataValues.role,
+      id: foundedUser.dataValues.id,
     };
 
     const access_token = accessToken(payload);
@@ -155,7 +162,7 @@ export const verify = async (
 
     logger.info(`user verified with email: ${email}`);
 
-    return res.status(200).json({
+    res.status(200).json({
       message: "Succes",
       access_token,
     });
@@ -176,12 +183,13 @@ export const resendOTP = async (
   next: NextFunction,
 ): Promise<Response | void> => {
   try {
-    const { error, value } = await ResendOTPValidator(req.body);
+    const result: ValidationResult = await ResendOTPValidator(req.body);
 
-    if (error) {
-      return res.status(400).json({ message: error.message });
+    if (result.error) {
+      throw CustomErrorHandler.BadRequest(result.error.message);
     }
-    const { email } = value.body as ResendOTPDTO;
+
+    const { email } = result.value as ResendOTPDTO;
 
     const foundedUser = await Auth.findOne({ where: { email: email } });
 
@@ -195,20 +203,22 @@ export const resendOTP = async (
 
     const time = Date.now() + 5 * 60 * 1000;
 
-    foundedUser.otp = generatedCode;
-    foundedUser.otpTime = time;
+    foundedUser.dataValues.otp = generatedCode;
+    foundedUser.dataValues.otpTime = time;
     await foundedUser.save();
 
     await sendMessage(email, generatedCode);
 
     logger.info(`OTP resent email: ${email}`);
 
-    return res.status(200).json({
+    res.status(200).json({
       message: "verification code resent",
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
+
     logger.error("Resend OTP error:" + message);
+
     next(error);
   }
 };
@@ -221,13 +231,13 @@ export const login = async (
   next: NextFunction,
 ): Promise<Response | void> => {
   try {
-    const { error, value } = await LoginValidator(req.body);
+    const result: ValidationResult = await LoginValidator(req.body);
 
-    if (error) {
-      return res.status(400).json({ message: error.message });
+    if (result.error) {
+      throw CustomErrorHandler.BadRequest(result.error.message);
     }
 
-    const { email, password } = value.body as LoginDTO;
+    const { email, password } = result.value as LoginDTO;
 
     const user = await Auth.findOne({ where: { email: email } });
 
@@ -245,7 +255,7 @@ export const login = async (
       throw CustomErrorHandler.UnAuthorized("Invalid password");
     }
 
-    if (!user.isVerified) {
+    if (!user.dataValues.isVerified) {
       logger.warn(`Login attempt with non-verified email: ${email}`);
 
       throw CustomErrorHandler.UnAuthorized("you are not verified");
@@ -254,8 +264,8 @@ export const login = async (
     const payload = {
       username: user.username,
       email: user.email,
-      role: user.role,
-      id: user.id,
+      role: user.dataValues.role,
+      id: user.dataValues.id,
     };
 
     const access_token = accessToken(payload);
@@ -273,7 +283,7 @@ export const login = async (
 
     logger.info(`user logged with email: ${email}`);
 
-    return res.status(200).json({
+    res.status(200).json({
       message: "Succes",
       access_token,
     });
@@ -294,13 +304,13 @@ export const forgotPassword = async (
   next: NextFunction,
 ): Promise<Response | void> => {
   try {
-    const { error, value } = await ForgotPasswordValidator(req.body);
+    const result: ValidationResult = await ForgotPasswordValidator(req.body);
 
-    if (error) {
-      return res.status(400).json({ message: error.message });
+    if (result.error) {
+      throw CustomErrorHandler.BadRequest(result.error.message);
     }
 
-    const { email, new_password, otp } = value.body as ForgotPasswordDTO;
+    const { email, new_password, otp } = result.value as ForgotPasswordDTO;
 
     const user = await Auth.findOne({ where: { email: email } });
 
@@ -310,7 +320,7 @@ export const forgotPassword = async (
       throw CustomErrorHandler.UnAuthorized("User not found");
     }
 
-    if (!user.isVerified) {
+    if (!user.dataValues.isVerified) {
       logger.warn(`Forgot password attempt with non-verified email: ${email}`);
 
       throw CustomErrorHandler.UnAuthorized("user not verified");
@@ -318,13 +328,13 @@ export const forgotPassword = async (
 
     const time = Date.now();
 
-    if (time > user.otpTime) {
+    if (time > user.dataValues.otpTime) {
       logger.warn(`Forgot password attempt with expired otp: ${email}`);
 
       throw CustomErrorHandler.BadRequest("OTP time expired");
     }
 
-    if (otp !== user.otp) {
+    if (otp !== user.dataValues.otp) {
       logger.warn(`Forgot password attempt with wrong otp: ${email}`);
 
       throw CustomErrorHandler.BadRequest("wrong verification code");
@@ -340,14 +350,14 @@ export const forgotPassword = async (
       },
       {
         where: {
-          id: user.id as number,
+          id: user.dataValues.id as number,
         },
       },
     );
 
     logger.info(`user forgot password with email: ${email}`);
 
-    return res.status(200).json({
+    res.status(200).json({
       message: "Password changed",
     });
   } catch (error: unknown) {
@@ -372,7 +382,7 @@ export const logout = async (
 
     logger.info("user logged out");
 
-    return res.status(200).json({
+    res.status(200).json({
       message: "you are logged out",
     });
   } catch (error: unknown) {

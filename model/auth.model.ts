@@ -2,10 +2,16 @@ import { DataTypes, Model } from "sequelize";
 import sequelize from "../config/config.js";
 
 export class Auth extends Model {
+  id!: number;
   username!: string;
   email!: string;
   password!: string;
-  birth_date!: string;
+  birth_year!: number;
+  role!: "admin" | "user" | "superadmin";
+  otp!: string | null;
+  otpTime!: number | null;
+  isVerified!: boolean;
+  userpic!: string;
 }
 
 Auth.init(
@@ -27,8 +33,8 @@ Auth.init(
       type: DataTypes.STRING,
       allowNull: false,
     },
-    birth_date: {
-      type: DataTypes.STRING,
+    birth_year: {
+      type: DataTypes.INTEGER,
       allowNull: false,
     },
     userpic: {
@@ -54,7 +60,7 @@ Auth.init(
     },
   },
   {
-    tableName: "bot_user",
+    tableName: "users",
     timestamps: true,
     sequelize,
   },
