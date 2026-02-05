@@ -16,9 +16,9 @@ export const RegisterValidatorMiddleware = async (
   next: NextFunction,
 ) => {
   try {
-    const value = await RegisterValidator(req.body);
+    const result = await RegisterValidator(req.body);
 
-    req.body = value;
+    req.body = result.value;
 
     next();
   } catch (error: unknown) {
@@ -34,9 +34,9 @@ export const LoginValidatorMiddleware = (
   next: NextFunction,
 ) => {
   try {
-    const value = LoginValidator(req.body);
+    const result = LoginValidator(req.body);
 
-    req.body = value;
+    req.body = result.value;
 
     next();
   } catch (error: unknown) {
@@ -52,9 +52,9 @@ export const VerifyValidatorMiddleware = (
   next: NextFunction,
 ) => {
   try {
-    const value = VerifyValidator(req.body);
+    const result = VerifyValidator(req.body);
 
-    req.body = value;
+    req.body = result.value;
 
     next();
   } catch (error: unknown) {
@@ -64,15 +64,15 @@ export const VerifyValidatorMiddleware = (
 
 // resend otp validation
 
-export const ResendOTPValidatorMiddleware = (
+export const ResendOTPValidatorMiddleware =  (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
   try {
-    const value = ResendOTPValidator(req.body);
+    const result =   ResendOTPValidator(req.body);
 
-    req.body = value;
+    req.body = result.value;
 
     next();
   } catch (error: unknown) {
@@ -82,15 +82,15 @@ export const ResendOTPValidatorMiddleware = (
 
 /// forgot password validation
 
-export const ForgotPasswordValidatorMiddleware = (
+export const ForgotPasswordValidatorMiddleware = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
   try {
-    const value = ForgotPasswordValidator(req.body);
+    const result = await ForgotPasswordValidator(req.body);
 
-    req.body = value;
+    req.body = result.value;
 
     next();
   } catch (error: unknown) {

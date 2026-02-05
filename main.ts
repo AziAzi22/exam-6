@@ -3,10 +3,16 @@ import cors from "cors";
 import dotenv from "dotenv";
 import authRouter from "./routes/auth.routes.js";
 import { errorHandler } from "./middleware/error.middleware.js";
+import cookieParser from "cookie-parser";
 // import sequelize from "./config/config.js"; 
 dotenv.config();
 
+
 const app = express();
+
+// cookies 
+
+app.use(cookieParser());
 
 app.use(cors());
 app.use(express.json());

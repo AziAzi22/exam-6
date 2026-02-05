@@ -2,16 +2,16 @@ import { DataTypes, Model } from "sequelize";
 import sequelize from "../config/config.js";
 
 export class Auth extends Model {
-  id!: number;
-  username!: string;
-  email!: string;
-  password!: string;
-  birth_year!: number;
-  role!: "admin" | "user" | "superadmin";
-  otp!: string | null;
-  otpTime!: number | null;
-  isVerified!: boolean;
-  userpic!: string;
+  declare id: number;
+  declare username: string;
+  declare email: string;
+  declare password: string;
+  declare birth_year: number;
+  declare role: "admin" | "user" | "superadmin";
+  declare otp: string | null;
+  declare otpTime: number | null;
+  declare isVerified: boolean;
+  declare userpic: string;
 }
 
 Auth.init(
@@ -21,39 +21,48 @@ Auth.init(
       primaryKey: true,
       autoIncrement: true,
     },
+
     username: {
       type: DataTypes.STRING,
       allowNull: false,
     },
+
     email: {
       type: DataTypes.STRING,
       allowNull: false,
     },
+
     password: {
       type: DataTypes.STRING,
       allowNull: false,
     },
+
     birth_year: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+
     userpic: {
       type: DataTypes.STRING,
       allowNull: false,
     },
+
     role: {
       type: DataTypes.ENUM("admin", "user", "superadmin"),
       defaultValue: "user",
       allowNull: false,
     },
+
     otp: {
       type: DataTypes.STRING,
       defaultValue: null,
     },
+
     isVerified: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+
     otpTime: {
       type: DataTypes.BIGINT,
       defaultValue: null,
@@ -63,5 +72,5 @@ Auth.init(
     tableName: "users",
     timestamps: true,
     sequelize,
-  },
+  }
 );

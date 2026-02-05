@@ -22,8 +22,11 @@ import type {
 } from "../dto/auth.dto.js";
 import { Op, ValidationError } from "sequelize";
 import type { ValidationResult } from "joi";
+import { Logger } from "../model/logger.model.js";
 
 Auth.sync({ force: false });
+
+Logger.sync({ force: false });
 
 // register
 
@@ -36,7 +39,7 @@ export const register = async (
     const result: ValidationResult = await RegisterValidator(req.body);
 
     if (result.error) {
-      throw CustomErrorHandler.BadRequest(result.error.message);
+      throw CustomErrorHandler.BadRequest(result.value.error);
     }
 
     const { username, email, password, birth_year } =
@@ -63,7 +66,7 @@ export const register = async (
     const time = Date.now() + 5 * 60 * 1000;
 
     await Auth.create({
-      userpic: "/images/default_photo_for_profile.png",
+      userpic: "../upload/images/default_photo.jpg",
       username,
       email,
       password: hash,
@@ -100,7 +103,7 @@ export const verify = async (
   next: NextFunction,
 ): Promise<Response | void> => {
   try {
-    const result: ValidationResult = await VerifyValidator(req.body);
+    const result: ValidationResult = VerifyValidator(req.body);
 
     if (result.error) {
       throw CustomErrorHandler.BadRequest(result.error.message);
@@ -122,7 +125,13 @@ export const verify = async (
 
     const time = Date.now();
 
-    if (time > foundedUser.dataValues.otpTime) {
+    const otpTime = Number(foundedUser.otpTime);
+
+    if (!otpTime) {
+      throw CustomErrorHandler.BadRequest("OTP not found");
+    }
+
+    if (time > otpTime) {
       logger.warn(`Verification attempt with expired OTP: ${email}`);
 
       throw CustomErrorHandler.BadRequest("OTP time expired");
@@ -142,9 +151,9 @@ export const verify = async (
 
     const payload = {
       username: foundedUser.username,
-      email: foundedUser.dataValues.dataValues.email,
-      role: foundedUser.dataValues.role,
-      id: foundedUser.dataValues.id,
+      email: foundedUser.email,
+      role: foundedUser.role,
+      id: foundedUser.id,
     };
 
     const access_token = accessToken(payload);
@@ -203,8 +212,9 @@ export const resendOTP = async (
 
     const time = Date.now() + 5 * 60 * 1000;
 
-    foundedUser.dataValues.otp = generatedCode;
-    foundedUser.dataValues.otpTime = time;
+    foundedUser.otp = generatedCode;
+    foundedUser.otpTime = time;
+
     await foundedUser.save();
 
     await sendMessage(email, generatedCode);
@@ -318,7 +328,7 @@ export const forgotPassword = async (
       logger.warn(`Forgot password attempt with non-existing email: ${email}`);
 
       throw CustomErrorHandler.UnAuthorized("User not found");
-    }
+    } 
 
     if (!user.dataValues.isVerified) {
       logger.warn(`Forgot password attempt with non-verified email: ${email}`);
@@ -377,6 +387,7 @@ export const logout = async (
   next: NextFunction,
 ): Promise<Response | void> => {
   try {
+
     res.clearCookie("access_token");
     res.clearCookie("refresh_token");
 

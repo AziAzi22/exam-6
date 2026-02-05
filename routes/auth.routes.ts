@@ -22,17 +22,18 @@ authRouter.post("/login", LoginValidatorMiddleware, login as RequestHandler);
 authRouter.post("/verify", VerifyValidatorMiddleware, verify as RequestHandler);
 
 authRouter.post(
-  "/resend-otp",
+  "/resend_otp",
   ResendOTPValidatorMiddleware,
   resendOTP as RequestHandler,
 );
-
+ 
 authRouter.post(
-  "/forgot-password",
-  ForgotPasswordValidatorMiddleware,
+  "/forgot_password", 
+  ForgotPasswordValidatorMiddleware, 
   forgotPassword as RequestHandler,
 );
 
-authRouter.post("/logout", authorization, logout as RequestHandler);
+authRouter.get("/logout", authorization, logout as RequestHandler);
 
 export default authRouter;
+ 

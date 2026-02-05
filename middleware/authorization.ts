@@ -11,11 +11,14 @@ export const authorization = (
   next: NextFunction,
 ) => {
   try {
-    const token = req.cookies.access_token;
+    const token = req.cookies?.access_token;
+
     if (!token) throw CustomErrorHandler.UnAuthorized("access token not found");
 
-    const decoded = jwt.verify(token, process.env.SECRET_KEY!) as any;
+    const decoded = jwt.verify(token, process.env.ACCESS_SECRET_KEY!) as any;
+
     req.user = decoded;
+
     next();
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
@@ -26,10 +29,12 @@ export const authorization = (
 
 export const checkAdmin = (req: Request, res: Response, next: NextFunction) => {
   try {
-    const token = req.cookies.access_token;
+    const token = req.cookies?.access_token;
+
     if (!token) throw CustomErrorHandler.UnAuthorized("access token not found");
 
-    const decoded = jwt.verify(token, process.env.SECRET_KEY!) as any;
+    const decoded = jwt.verify(token, process.env.ACCESS_SECRET_KEY!) as any;
+
     req.user = decoded;
 
     if (!req.user) {

@@ -17,7 +17,7 @@ sequelize
   .then(() => console.log("Connected to database"))
   .catch((error) => console.log(error.message));
 
-  // sequelize.sync({ force: false });
+  sequelize.sync({ force: false });
   
   // sequelize.sync({ alter: true })
 

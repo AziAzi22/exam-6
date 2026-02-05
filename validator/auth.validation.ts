@@ -3,20 +3,16 @@ import type { ValidationResult } from "joi";
 
 // forgot password
 
-export const ForgotPasswordValidator = async (
-  data: unknown,
-): Promise<ValidationResult> =>
+export const ForgotPasswordValidator = (data: unknown): ValidationResult =>
   Joi.object({
     email: Joi.string().email().required(),
-    password: Joi.string().trim().min(8).required(),
+    new_password: Joi.string().trim().min(8).required(),
     otp: Joi.string().trim().required(),
   }).validate(data, { abortEarly: false });
 
 // verify
 
-export const VerifyValidator = async (
-  data: unknown,
-): Promise<ValidationResult> =>
+export const VerifyValidator = (data: unknown): ValidationResult =>
   Joi.object({
     email: Joi.string().email().required(),
     otp: Joi.string().required(),
@@ -24,18 +20,14 @@ export const VerifyValidator = async (
 
 // resend otp
 
-export const ResendOTPValidator = async (
-  data: unknown,
-): Promise<ValidationResult> =>
+export const ResendOTPValidator = (data: unknown): ValidationResult =>
   Joi.object({
     email: Joi.string().email().required(),
   }).validate(data, { abortEarly: false });
 
 // register
 
-export const RegisterValidator = async (
-  data: unknown,
-): Promise<ValidationResult> =>
+export const RegisterValidator = (data: unknown): ValidationResult =>
   Joi.object({
     username: Joi.string()
       .trim()
@@ -54,11 +46,8 @@ export const RegisterValidator = async (
 
 // login
 
-export const LoginValidator = async (
-  data: unknown,
-): Promise<ValidationResult> =>
+export const LoginValidator = (data: unknown): ValidationResult =>
   Joi.object({
     email: Joi.string().email().required(),
-
     password: Joi.string().trim().required(),
   }).validate(data, { abortEarly: false });
