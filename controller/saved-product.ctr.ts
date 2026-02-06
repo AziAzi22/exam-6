@@ -1,13 +1,11 @@
-// SAVE / UNSAVE PRODUCT
-
 import type { NextFunction, Request, Response } from "express";
 import logger from "../utils/logger.js";
-import { SavedProduct } from "../model/saved.product.js";
-import { Product } from "../model/product.model.js";
+import { Product, SavedProduct } from "../model/association.js";
+import { CustomErrorHandler } from "../utils/custom-error-handler.js";
 
 SavedProduct.sync({ force: false });
 
-/// save product
+// SAVE / UNSAVE PRODUCT
 
 export const saveProduct = async (
   req: Request,
@@ -17,10 +15,24 @@ export const saveProduct = async (
   try {
     const { id: productId } = req.params;
 
+    const newId = Number(productId);
+    console.log(newId);
+    console.log(req.params);
+
+    const product = await Product.findByPk(newId);
+
     const userId = req.user!.id;
 
+    if (isNaN(newId)) {
+      throw CustomErrorHandler.BadRequest("Invalid product id");
+    }
+
+    if (!product) {
+      throw CustomErrorHandler.NotFound("Product not found");
+    }
+
     const exists = await SavedProduct.findOne({
-      where: { productId, userId },
+      where: { productId: newId, userId },
     });
 
     if (exists) {
@@ -32,7 +44,7 @@ export const saveProduct = async (
     }
 
     await SavedProduct.create({
-      productId: Number(productId),
+      productId: newId,
       userId,
     });
 
@@ -65,6 +77,7 @@ export const getSavedProducts = async (
       include: [
         {
           model: Product,
+          as: "fk_productId_savedProduct_belongs",
         },
       ],
     });

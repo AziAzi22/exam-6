@@ -2,7 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import bcrypt from "bcryptjs";
 import { CustomErrorHandler } from "../utils/custom-error-handler.js";
 import logger from "../utils/logger.js";
-import { Auth } from "../model/auth.model.js";
+import { Auth } from "../model/association.js";
 
 // get profile
 
@@ -96,15 +96,20 @@ export const changePassword = async (
 
     if (!user) throw CustomErrorHandler.NotFound("User not found");
 
-    if (new_password !== confirm_password)
+    if (new_password !== confirm_password) {
       throw CustomErrorHandler.BadRequest("Passwords do not match");
-    if (current_password === new_password)
+    }
+
+    if (current_password === new_password) {
       throw CustomErrorHandler.BadRequest("New password must be different");
+    }
 
     const match = await bcrypt.compare(current_password, user.password);
+
     if (!match) throw CustomErrorHandler.UnAuthorized("Invalid password");
 
     const hash = await bcrypt.hash(new_password, 14);
+
     await user.update({ password: hash });
 
     res.status(200).json({ message: "password changed" });
@@ -113,6 +118,127 @@ export const changePassword = async (
       "change password error",
       error instanceof Error ? error.message : String(error),
     );
+    next(error);
+  }
+};
+
+// change email
+
+export const changeEmail = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { new_email, old_password, new_password, confirm_password } =
+      req.body;
+
+    const user = await Auth.findByPk(req.user!.id);
+
+    if (!user) throw CustomErrorHandler.NotFound("User not found");
+
+    const emailExists = await Auth.findOne({
+      where: { email: new_email },
+    });
+
+    if (emailExists)
+      throw CustomErrorHandler.BadRequest("email already exists");
+
+    if (old_password === new_password)
+      throw CustomErrorHandler.BadRequest(
+        "new password and current password must be different",
+      );
+
+    if (confirm_password !== new_password)
+      throw CustomErrorHandler.BadRequest(
+        "new password and confirm password must be same",
+      );
+
+    const match = await bcrypt.compare(old_password, user.password);
+
+    if (!match) throw CustomErrorHandler.UnAuthorized("Invalid password");
+
+    const hash = await bcrypt.hash(new_password, 14);
+
+    const oldEmail = user.email;
+
+    await user.update({
+      email: new_email,
+      password: hash,
+      isVerified: false,
+    });
+
+    logger.info(`Email changed from ${oldEmail} to ${new_email}`);
+
+    res.clearCookie("access_token");
+    res.clearCookie("refresh_token");
+
+    res.status(200).json({
+      message: "email changed please verify your new email",
+    });
+  } catch (error: unknown) {
+    logger.error(
+      "change email error",
+      error instanceof Error ? error.message : String(error),
+    );
+    next(error);
+  }
+};
+
+// change userpic
+
+export const changeUserpic = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        message: "file not uploaded",
+      });
+    }
+
+    const path = "../upload/images/" + req.file.filename;
+
+    await Auth.update({ userpic: path }, { where: { id: req.user!.id } });
+    
+    res.status(200).json({
+      message: "userpic updated",
+      userpic: path,
+    });
+  } catch (error: unknown) {
+    logger.error(
+      "change userpic error",
+      error instanceof Error ? error.message : String(error),
+    );
+    next(error);
+  }
+};
+
+// change adress
+
+export const changeAdress = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { adress } = req.body;
+
+    const user = await Auth.findByPk(req.user!.id);
+
+    if (!user) throw CustomErrorHandler.NotFound("User not found");
+
+    await user.update({ adress: adress });
+
+    res.status(200).json({ message: "adress changed" });
+  } catch (error: unknown) {
+    logger.error(
+      "change adress error",
+      error instanceof Error ? error.message : String(error),
+    );
+
     next(error);
   }
 };

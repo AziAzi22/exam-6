@@ -1,7 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
 import logger from "../utils/logger.js";
-import { Auth } from "../model/auth.model.js";
 import { CustomErrorHandler } from "../utils/custom-error-handler.js";
+import { Auth } from "../model/association.js";
+import { UserRoles } from "../enum/user-role.enum.js";
 
 // role upgrade
 
@@ -17,7 +18,7 @@ export const roleUpgrade = async (
 
     if (!user) throw CustomErrorHandler.NotFound("User not found");
 
-    user.role = "admin";
+    user.role = UserRoles.ADMIN;
     await user.save();
 
     logger.info("role upgraded", {
@@ -49,7 +50,7 @@ export const roleDowngrade = async (
 
     if (!user) throw CustomErrorHandler.NotFound("User not found");
 
-    user.role = "user";
+    user.role = UserRoles.USER;
     await user.save();
 
     logger.info("role downgraded", {

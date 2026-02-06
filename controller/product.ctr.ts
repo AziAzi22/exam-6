@@ -1,5 +1,4 @@
 import type { NextFunction, Request, Response } from "express";
-import { Product } from "../model/product.model.js";
 import logger from "../utils/logger.js";
 import {
   CreateProductValidator,
@@ -7,6 +6,7 @@ import {
 } from "../validator/product.validation.js";
 import type { CreateProductDTO, UpdateProductDTO } from "../dto/product.dto.js";
 import { CustomErrorHandler } from "../utils/custom-error-handler.js";
+import { Product } from "../model/association.js";
 
 Product.sync({ force: false });
 
@@ -24,18 +24,12 @@ export const createProduct = async (
       throw CustomErrorHandler.BadRequest(error.message);
     }
 
-    const {
-      title,
-      price,
-      quantity,
-      description,
-      imageOneUrl,
-      imageTwoUrl,
-      imageThreeUrl,
-      imageFourUrl,
-      categoryId,
-      adminId,
-    } = value.body as CreateProductDTO;
+    const { title, price, quantity, description, categoryId } =
+      value as CreateProductDTO;
+
+    const adminId = req.user!.id;
+
+    const files = req.files as { [fieldName: string]: Express.Multer.File[] };
 
     const exists = await Product.findOne({
       where: {
@@ -47,17 +41,32 @@ export const createProduct = async (
       throw CustomErrorHandler.AlreadyExist("product already exists");
     }
 
+    if (!files || !files["image"]?.length) {
+      throw CustomErrorHandler.BadRequest("at least one image is needed");
+    }
+
+    const imageOneUrl = "/upload/images/" + files["image"][0]?.filename;
+    const imageTwoUrl = files["image_two"]?.[0]?.filename
+      ? "/upload/images/" + files["image_two"][0].filename
+      : null;
+    const imageThreeUrl = files["image_three"]?.[0]?.filename
+      ? "/upload/images/" + files["image_three"][0].filename
+      : null;
+    const imageFourUrl = files["image_four"]?.[0]?.filename
+      ? "/upload/images/" + files["image_four"][0].filename
+      : null;
+
     await Product.create({
       title,
       price,
       quantity,
       description,
+      categoryId,
+      adminId,
       imageOneUrl,
       imageTwoUrl,
       imageThreeUrl,
       imageFourUrl,
-      categoryId,
-      adminId,
     });
 
     res.status(201).json({
@@ -72,9 +81,29 @@ export const createProduct = async (
   }
 };
 
+// get all products
+
+export const getAllProducts = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<Response | void> => {
+  try {
+    const products = await Product.findAll();
+
+    res.status(200).json(products);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    logger.error("Get all products error:" + message);
+
+    next(error);
+  }
+};
+
 // get one products
 
-export const getProductById = async (
+export const getOneProduct = async (
   req: Request,
   res: Response,
   next: NextFunction,
@@ -122,30 +151,41 @@ export const updateProduct = async (
 
     if (error) {
       throw CustomErrorHandler.BadRequest(error.message);
-    }
+    } 
 
-    const {
-      title,
-      price,
-      quantity,
-      description,
-      imageOneUrl,
-      imageTwoUrl,
-      imageThreeUrl,
-      imageFourUrl,
-      categoryId,
-    } = value.body as UpdateProductDTO;
+    const { title, price, quantity, description, categoryId } =
+      value.body as UpdateProductDTO;
+
+    const files = req.files as
+      | { [fieldName: string]: Express.Multer.File[] }
+      | undefined;
+
+    const imageOneUrl = files?.["image"]?.[0]?.filename
+      ? "/upload/images/" + files["image"][0].filename
+      : product.imageOneUrl;
+
+    const imageTwoUrl = files?.["image_two"]?.[0]?.filename
+      ? "/upload/images/" + files["image_two"][0].filename
+      : product.imageTwoUrl;
+
+    const imageThreeUrl = files?.["image_three"]?.[0]?.filename
+      ? "/upload/images/" + files["image_three"][0].filename
+      : product.imageThreeUrl;
+
+    const imageFourUrl = files?.["image_four"]?.[0]?.filename
+      ? "/upload/images/" + files["image_four"][0].filename
+      : product.imageFourUrl;
 
     await product.update({
       title,
       price,
       quantity,
       description,
+      categoryId,
       imageOneUrl,
       imageTwoUrl,
       imageThreeUrl,
       imageFourUrl,
-      categoryId,
     });
 
     res.status(200).json({

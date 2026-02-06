@@ -3,7 +3,7 @@ import sequelize from "../config/config.js";
 
 export class SavedProduct extends Model {
   userId!: number;
-  SavedId!: number;
+  ProductId!: number;
 }
 
 SavedProduct.init(
@@ -16,10 +16,18 @@ SavedProduct.init(
     userId: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      references: {
+        model: "users",
+        key: "id",
+      }
     },
-    SavedId: {
+    productId: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      references: {
+        model: "products",
+        key: "id",
+      }
     },
   },
   {

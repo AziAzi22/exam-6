@@ -1,5 +1,6 @@
 import { DataTypes, Model } from "sequelize";
 import sequelize from "../config/config.js";
+import { UserRoles } from "../enum/user-role.enum.js";
 
 export class Auth extends Model {
   declare id: number;
@@ -7,7 +8,8 @@ export class Auth extends Model {
   declare email: string;
   declare password: string;
   declare birth_year: number;
-  declare role: "admin" | "user" | "superadmin";
+  declare role: UserRoles;
+  declare adress: string;
   declare otp: string | null;
   declare otpTime: number | null;
   declare isVerified: boolean;
@@ -21,38 +23,38 @@ Auth.init(
       primaryKey: true,
       autoIncrement: true,
     },
-
     username: {
       type: DataTypes.STRING,
       allowNull: false,
+      unique: true,
     },
-
     email: {
       type: DataTypes.STRING,
       allowNull: false,
+      unique: true,
     },
-
     password: {
       type: DataTypes.STRING,
       allowNull: false,
     },
-
     birth_year: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-
     userpic: {
       type: DataTypes.STRING,
       allowNull: false,
     },
-
     role: {
-      type: DataTypes.ENUM("admin", "user", "superadmin"),
+      type: DataTypes.ENUM(...Object.values(UserRoles)),
       defaultValue: "user",
       allowNull: false,
     },
-
+    adress: {
+      type: DataTypes.STRING,
+      defaultValue: null,
+      allowNull: true,
+    },
     otp: {
       type: DataTypes.STRING,
       defaultValue: null,
@@ -72,5 +74,5 @@ Auth.init(
     tableName: "users",
     timestamps: true,
     sequelize,
-  }
+  },
 );

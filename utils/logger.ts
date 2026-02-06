@@ -1,34 +1,23 @@
 import { createLogger, format, transports } from "winston";
 import Transport from "winston-transport";
-import sequelize from "../config/config.js";
-import { QueryTypes } from "sequelize";
+import { Logger } from "../model/logger.model.js";
 
 const { combine, timestamp, printf, colorize } = format;
 
 class PostgresTransport extends Transport {
-  constructor(opts?: any) {
-    super(opts);
-  }
-
   async log(info: any, callback: () => void) {
     setImmediate(() => {
       this.emit("logged", info);
     });
 
     try {
-      await sequelize.query(
-        'INSERT INTO logs (level, message, timestamp) VALUES (:level, :message, :timestamp)',
-        {
-          replacements: {
-            level: info.level,
-            message: info.message,
-            timestamp: info.timestamp || new Date(),
-          },
-          type: QueryTypes.INSERT,
-        }
-      );
+      await Logger.create({
+        level: info.level,
+        message: info.message,
+        timestamp: info.timestamp || new Date(),
+      });
     } catch (err) {
-      console.error("Failed to write log to PG:", err);
+      console.error("Failed to write log via Sequelize:", err);
     }
 
     callback();

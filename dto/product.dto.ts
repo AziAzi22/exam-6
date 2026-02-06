@@ -3,12 +3,7 @@ export interface CreateProductDTO {
     price: number;
     quantity: number;
     description?: string;
-    imageOneUrl: string;
-    imageTwoUrl?: string;
-    imageThreeUrl?: string;
-    imageFourUrl?: string;
     categoryId: number;
-    adminId: number;
 }
 
 
@@ -17,9 +12,5 @@ export interface UpdateProductDTO {
     price?: number;
     quantity?: number;
     description?: string;
-    imageOneUrl?: string;
-    imageTwoUrl?: string;
-    imageThreeUrl?: string;
-    imageFourUrl?: string;
     categoryId?: number;
 }

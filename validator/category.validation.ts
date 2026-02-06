@@ -8,8 +8,6 @@ export const CreateCategoryValidator = async (
 ): Promise<ValidationResult> =>
   Joi.object({
     title: Joi.string().trim().min(2).max(30).required(),
-    imageUrl: Joi.string().trim().required(),
-    adminId: Joi.number().integer().required(),
   }).validate(data, { abortEarly: false });
 
 // update category
@@ -18,7 +16,6 @@ export const UpdateCategoryValidator = async (
   data: unknown,
 ): Promise<ValidationResult> =>
   Joi.object({
-    title: Joi.string().trim().min(2).max(30).required(),
-    imageUrl: Joi.string().trim().required(),
+    title: Joi.string().trim().min(2).max(30).optional(),
+    imageUrl: Joi.string().trim().optional(),
   }).validate(data, { abortEarly: false });
-

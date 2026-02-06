@@ -1,5 +1,4 @@
 import type { NextFunction, Request, Response } from "express";
-import { Category } from "../model/category.models.js";
 import logger from "../utils/logger.js";
 import {
   CreateCategoryValidator,
@@ -10,7 +9,7 @@ import type {
   UpdateCategoryDTO,
 } from "../dto/category.dto.js";
 import { CustomErrorHandler } from "../utils/custom-error-handler.js";
-import { Product } from "../model/product.model.js";
+import { Category, Product } from "../model/association.js";
 
 Category.sync({ force: false });
 
@@ -30,7 +29,7 @@ export const createCategory = async (
 
     const exists = await Category.findOne({
       where: {
-        title: value.body.title,
+        title: value.title,
       },
     });
 
@@ -38,9 +37,17 @@ export const createCategory = async (
       throw CustomErrorHandler.AlreadyExist("category already exists");
     }
 
-    const { title, imageUrl, adminId } = value.body as CreateCategoryDTO;
+    if (!req.file) {
+      throw CustomErrorHandler.BadRequest("image file is required");
+    }
 
-    await Category.create({ title, imageUrl, adminId });
+    const path = "/upload/images/" + req.file.filename;
+
+    const { title } = value as CreateCategoryDTO;
+
+    const adminId = req.user!.id;
+
+    await Category.create({ title, imageUrl: path, adminId });
 
     res.status(201).json({ message: "category created" });
   } catch (error: unknown) {
@@ -74,7 +81,7 @@ export const getAllCategories = async (
 
 /// get one category
 
-export const getCategoryById = async (
+export const getOneCategory = async (
   req: Request,
   res: Response,
   next: NextFunction,
@@ -130,9 +137,15 @@ export const updateCategory = async (
       throw CustomErrorHandler.BadRequest(error.message);
     }
 
-    const { title, imageUrl } = value.body as UpdateCategoryDTO;
+    const { title } = value as UpdateCategoryDTO;
 
-    await category.update({ title, imageUrl });
+    if (!req.file) {
+      throw CustomErrorHandler.BadRequest("image file is required");
+    }
+
+    const path = "/upload/images/" + req.file.filename;
+
+    await category.update({ title, imageUrl: path });
 
     res.status(200).json({ message: "category updated" });
   } catch (error: unknown) {

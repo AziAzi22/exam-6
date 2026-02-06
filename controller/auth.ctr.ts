@@ -1,4 +1,3 @@
-import { Auth } from "../model/auth.model.js";
 import type { Request, Response, NextFunction } from "express";
 import {
   ForgotPasswordValidator,
@@ -23,6 +22,7 @@ import type {
 import { Op, ValidationError } from "sequelize";
 import type { ValidationResult } from "joi";
 import { Logger } from "../model/logger.model.js";
+import { Auth } from "../model/association.js";
 
 Auth.sync({ force: false });
 

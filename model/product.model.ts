@@ -91,5 +91,3 @@ Product.init(
 );
 
 
-Auth.hasMany(Product, { foreignKey: "adminId" });
-Product.belongsTo(Auth, { foreignKey: "adminId" });

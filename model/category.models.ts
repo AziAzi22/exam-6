@@ -1,6 +1,5 @@
 import { DataTypes, Model } from "sequelize";
 import sequelize from "../config/config.js";
-import { Auth } from "./auth.model.js";
 
 export class Category extends Model {
   id!: number;
@@ -40,5 +39,3 @@ Category.init(
   },
 );
 
-Auth.hasMany(Category, { foreignKey: "adminId" });
-Category.belongsTo(Auth, { foreignKey: "adminId" });

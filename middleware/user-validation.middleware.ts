@@ -4,8 +4,11 @@ import {
   changeBirthYearValidator,
   changeUsernameValidator,
   changePasswordValidator,
+  changeAdressValidator,
 } from "../validator/user.validation.js";
 import { CustomErrorHandler } from "../utils/custom-error-handler.js";
+
+// change email validatiim moddleware
 
 export const changeEmailValidatorMiddleware = async (
   req: Request,
@@ -20,6 +23,8 @@ export const changeEmailValidatorMiddleware = async (
   }
 };
 
+// change password validation moddleware
+
 export const changePasswordValidatorMiddleware = async (
   req: Request,
   res: Response,
@@ -32,6 +37,8 @@ export const changePasswordValidatorMiddleware = async (
     next(CustomErrorHandler.BadRequest(error.message));
   }
 };
+
+// change username validation middleware
 
 export const changeUsernameValidatorMiddleware = async (
   req: Request,
@@ -46,6 +53,8 @@ export const changeUsernameValidatorMiddleware = async (
   }
 };
 
+/// change birth+year validation middleware
+
 export const changeBirthYearValidatorMiddleware = async (
   req: Request,
   res: Response,
@@ -53,6 +62,36 @@ export const changeBirthYearValidatorMiddleware = async (
 ) => {
   try {
     await changeBirthYearValidator(req.body);
+    next();
+  } catch (error: any) {
+    next(CustomErrorHandler.BadRequest(error.message));
+  }
+};
+
+// userpic
+
+export const changeUserpicValidatorMiddleware = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  if (!req.file) {
+    return next(CustomErrorHandler.BadRequest("picture is required"));
+  }
+
+  next();
+};
+
+// change adress
+
+export const changeAdressValidatorMiddleware = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    await changeAdressValidator(req.body);
+
     next();
   } catch (error: any) {
     next(CustomErrorHandler.BadRequest(error.message));
