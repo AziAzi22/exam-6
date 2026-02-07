@@ -6,6 +6,8 @@ import type {
 } from "../dto/category.dto.js";
 import { CustomErrorHandler } from "../utils/custom-error-handler.js";
 import { Category, Product } from "../model/association.js";
+import { getPagination } from "../utils/pagination.js";
+import { Op } from "sequelize";
 
 Category.sync({ force: false });
 
@@ -78,8 +80,11 @@ export const getOneCategory = async (
 ): Promise<Response | void> => {
   try {
     const { id } = req.params;
+    const newID = Number(id);
 
-    const newID = Number(id as string);
+    if (isNaN(newID)) {
+      throw CustomErrorHandler.BadRequest("Invalid category id");
+    }
 
     const category = await Category.findByPk(newID);
 
@@ -87,21 +92,54 @@ export const getOneCategory = async (
       throw CustomErrorHandler.NotFound("category not found");
     }
 
-    const products = await Product.findAll({
-      where: {
-        categoryId: newID,
-      },
+    const { page, limit, offset } = getPagination(req);
+
+    const search = (req.query.search as string)?.trim() || "";
+
+    let whereClause: any = {
+      categoryId: newID,
+    };
+
+    if (search) {
+      whereClause[Op.or] = [
+        { title: { [Op.iLike]: `%${search}%` } },
+        { description: { [Op.iLike]: `%${search}%` } },
+      ];
+    }
+
+    const { count, rows: products } = await Product.findAndCountAll({
+      where: whereClause,
+      offset,
+      limit,
+      order: [["createdAt", "DESC"]],
     });
 
-    res.status(200).json(products);
+    const totalPage = Math.ceil(count / limit);
+
+    res.status(200).json({
+      category: {
+        id: category.id,
+        name: category.title,
+      },
+
+      totalPage,
+      currentPage: page,
+      totalItems: count,
+
+      prev: page > 1 ? { page: page - 1, limit } : null,
+
+      next: totalPage > page ? { page: page + 1, limit } : null,
+
+      data: products,
+    });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-
-    logger.error("Get category by id error:" + message);
-
+    logger.error(
+      "Get category by id error: " + (error as Error).message,
+    );
     next(error);
   }
 };
+
 
 /// update category
 

@@ -3,6 +3,8 @@ import logger from "../utils/logger.js";
 import type { CreateProductDTO, UpdateProductDTO } from "../dto/product.dto.js";
 import { CustomErrorHandler } from "../utils/custom-error-handler.js";
 import { Product } from "../model/association.js";
+import { Op } from "sequelize";
+import { getPagination } from "../utils/pagination.js";
 
 Product.sync({ force: false });
 
@@ -14,8 +16,6 @@ export const createProduct = async (
   next: NextFunction,
 ): Promise<Response | void> => {
   try {
-
-
     const { title, price, quantity, description, categoryId } =
       req.body as CreateProductDTO;
 
@@ -81,14 +81,43 @@ export const getAllProducts = async (
   next: NextFunction,
 ): Promise<Response | void> => {
   try {
-    const products = await Product.findAll();
+    const { page, limit, offset } = getPagination(req);
 
-    res.status(200).json(products);
+    const search = (req.query.search as string)?.trim() || "";
+
+    let whereClause: any = {};
+
+    if (search) {
+      whereClause = {
+        [Op.or]: [
+          { title: { [Op.iLike]: `%${search}%` } },
+          { description: { [Op.iLike]: `%${search}%` } },
+        ],
+      };
+    }
+
+    const { count, rows: products } = await Product.findAndCountAll({
+      where: whereClause,
+      offset,
+      limit,
+      order: [["createdAt", "DESC"]],
+    });
+
+    const totalPage = Math.ceil(count / limit);
+
+    res.status(200).json({
+      totalPage,
+      currentPage: page,
+      totalItems: count,
+
+      prev: page > 1 ? { page: page - 1, limit } : null,
+
+      next: totalPage > page ? { page: page + 1, limit } : null,
+
+      data: products,
+    });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-
-    logger.error("Get all products error:" + message);
-
+    logger.error("Get all products error: " + (error as Error).message);
     next(error);
   }
 };
@@ -138,7 +167,6 @@ export const updateProduct = async (
     if (!product) {
       throw CustomErrorHandler.NotFound("product not found");
     }
-
 
     const { title, price, quantity, description, categoryId } =
       req.body as UpdateProductDTO;
