@@ -1,9 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
 import logger from "../utils/logger.js";
-import {
-  CreateCategoryValidator,
-  UpdateCategoryValidator,
-} from "../validator/category.validation.js";
 import type {
   CreateCategoryDTO,
   UpdateCategoryDTO,
@@ -21,15 +17,11 @@ export const createCategory = async (
   next: NextFunction,
 ): Promise<Response | void> => {
   try {
-    const { error, value } = await CreateCategoryValidator(req.body);
-
-    if (error) {
-      return res.status(400).json({ message: error.message });
-    }
+    const { title } = req.body as CreateCategoryDTO;
 
     const exists = await Category.findOne({
       where: {
-        title: value.title,
+        title: title,
       },
     });
 
@@ -42,8 +34,6 @@ export const createCategory = async (
     }
 
     const path = "/upload/images/" + req.file.filename;
-
-    const { title } = value as CreateCategoryDTO;
 
     const adminId = req.user!.id;
 
@@ -131,13 +121,7 @@ export const updateCategory = async (
       throw CustomErrorHandler.NotFound("category not found");
     }
 
-    const { error, value } = await UpdateCategoryValidator(req.body);
-
-    if (error) {
-      throw CustomErrorHandler.BadRequest(error.message);
-    }
-
-    const { title } = value as UpdateCategoryDTO;
+    const { title } = req.body as UpdateCategoryDTO;
 
     if (!req.file) {
       throw CustomErrorHandler.BadRequest("image file is required");

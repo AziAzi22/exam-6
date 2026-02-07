@@ -72,7 +72,7 @@ Product.init(
         model: "categories",
         key: "id",
       },
-    },
+    }, 
 
     adminId: {
       type: DataTypes.INTEGER,

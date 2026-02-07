@@ -1,9 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
 import logger from "../utils/logger.js";
-import {
-  CreateProductValidator,
-  UpdateProductValidator,
-} from "../validator/product.validation.js";
 import type { CreateProductDTO, UpdateProductDTO } from "../dto/product.dto.js";
 import { CustomErrorHandler } from "../utils/custom-error-handler.js";
 import { Product } from "../model/association.js";
@@ -18,14 +14,10 @@ export const createProduct = async (
   next: NextFunction,
 ): Promise<Response | void> => {
   try {
-    const { error, value } = await CreateProductValidator(req.body);
 
-    if (error) {
-      throw CustomErrorHandler.BadRequest(error.message);
-    }
 
     const { title, price, quantity, description, categoryId } =
-      value as CreateProductDTO;
+      req.body as CreateProductDTO;
 
     const adminId = req.user!.id;
 
@@ -33,7 +25,7 @@ export const createProduct = async (
 
     const exists = await Product.findOne({
       where: {
-        title: value.title,
+        title: title,
       },
     });
 
@@ -147,14 +139,9 @@ export const updateProduct = async (
       throw CustomErrorHandler.NotFound("product not found");
     }
 
-    const { error, value } = await UpdateProductValidator(req.body);
-
-    if (error) {
-      throw CustomErrorHandler.BadRequest(error.message);
-    } 
 
     const { title, price, quantity, description, categoryId } =
-      value.body as UpdateProductDTO;
+      req.body as UpdateProductDTO;
 
     const files = req.files as
       | { [fieldName: string]: Express.Multer.File[] }

@@ -1,11 +1,4 @@
 import type { Request, Response, NextFunction } from "express";
-import {
-  ForgotPasswordValidator,
-  LoginValidator,
-  RegisterValidator,
-  ResendOTPValidator,
-  VerifyValidator,
-} from "../validator/auth.validation.js";
 import bcrypt from "bcryptjs";
 import { otpGenerator } from "../utils/otp-generator.js";
 import { CustomErrorHandler } from "../utils/custom-error-handler.js";
@@ -19,8 +12,7 @@ import type {
   ResendOTPDTO,
   VerifyDTO,
 } from "../dto/auth.dto.js";
-import { Op, ValidationError } from "sequelize";
-import type { ValidationResult } from "joi";
+import { Op } from "sequelize";
 import { Logger } from "../model/logger.model.js";
 import { Auth } from "../model/association.js";
 
@@ -34,16 +26,9 @@ export const register = async (
   req: Request,
   res: Response,
   next: NextFunction,
-): Promise<Response | void> => {
+) => {
   try {
-    const result: ValidationResult = await RegisterValidator(req.body);
-
-    if (result.error) {
-      throw CustomErrorHandler.BadRequest(result.value.error);
-    }
-
-    const { username, email, password, birth_year } =
-      result.value as RegisterDTO;
+    const { username, email, password, birth_year } = req.body as RegisterDTO;
 
     const exists = await Auth.findOne({
       where: {
@@ -52,8 +37,6 @@ export const register = async (
     });
 
     if (exists) {
-      logger.warn(`Register attempt with existing email/username: ${email}`);
-
       return res
         .status(400)
         .json({ message: "Email or username already exists" });
@@ -62,7 +45,6 @@ export const register = async (
     const hash = await bcrypt.hash(password, 14);
 
     const generatedCode = otpGenerator();
-
     const time = Date.now() + 5 * 60 * 1000;
 
     await Auth.create({
@@ -82,15 +64,8 @@ export const register = async (
     res.status(201).json({
       message: "you are registred ✌️",
     });
-  } catch (error: unknown) {
-    if (error instanceof ValidationError) {
-      throw CustomErrorHandler.BadRequest(error.message);
-    }
-
-    const message = error instanceof Error ? error.message : String(error);
-
-    logger.error("Register error: " + message);
-
+  } catch (error) {
+    logger.error("Register error: " + String(error));
     next(error);
   }
 };
@@ -101,45 +76,24 @@ export const verify = async (
   req: Request,
   res: Response,
   next: NextFunction,
-): Promise<Response | void> => {
+) => {
   try {
-    const result: ValidationResult = VerifyValidator(req.body);
+    const { email, otp } = req.body as VerifyDTO;
 
-    if (result.error) {
-      throw CustomErrorHandler.BadRequest(result.error.message);
-    }
-
-    const { email, otp } = result.value as VerifyDTO;
-
-    const foundedUser = await Auth.findOne({ where: { email: email } });
+    const foundedUser = await Auth.findOne({ where: { email } });
 
     if (!foundedUser) {
-      logger.warn(`Verification attempt with non-existing email: ${email}`);
-
       throw CustomErrorHandler.NotFound("User not found");
     }
 
-    // if (foundedUser.isVerified) {
-    //   throw CustomErrorHandler.BadRequest("User already verified");
-    // }
-
     const time = Date.now();
-
     const otpTime = Number(foundedUser.otpTime);
 
-    if (!otpTime) {
-      throw CustomErrorHandler.BadRequest("OTP not found");
-    }
-
     if (time > otpTime) {
-      logger.warn(`Verification attempt with expired OTP: ${email}`);
-
       throw CustomErrorHandler.BadRequest("OTP time expired");
     }
 
-    if (otp !== foundedUser.dataValues.otp) {
-      logger.warn(`Verification attempt with wrong OTP: ${email}`);
-
+    if (otp !== foundedUser.otp) {
       throw CustomErrorHandler.BadRequest("wrong verification code");
     }
 
@@ -169,17 +123,12 @@ export const verify = async (
       maxAge: 30 * 24 * 60 * 1000,
     });
 
-    logger.info(`user verified with email: ${email}`);
-
     res.status(200).json({
       message: "Succes",
       access_token,
     });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-
-    logger.error("Verify error:" + message);
-
+  } catch (error) {
+    logger.error("Verify error:" + String(error));
     next(error);
   }
 };
@@ -190,45 +139,30 @@ export const resendOTP = async (
   req: Request,
   res: Response,
   next: NextFunction,
-): Promise<Response | void> => {
+) => {
   try {
-    const result: ValidationResult = await ResendOTPValidator(req.body);
+    const { email } = req.body as ResendOTPDTO;
 
-    if (result.error) {
-      throw CustomErrorHandler.BadRequest(result.error.message);
-    }
-
-    const { email } = result.value as ResendOTPDTO;
-
-    const foundedUser = await Auth.findOne({ where: { email: email } });
+    const foundedUser = await Auth.findOne({ where: { email } });
 
     if (!foundedUser) {
-      logger.warn(`Resend OTP attempt with non-existing email: ${email}`);
-
       throw CustomErrorHandler.UnAuthorized("you are not registered");
     }
 
     const generatedCode = otpGenerator();
-
     const time = Date.now() + 5 * 60 * 1000;
 
     foundedUser.otp = generatedCode;
     foundedUser.otpTime = time;
 
     await foundedUser.save();
-
     await sendMessage(email, generatedCode);
-
-    logger.info(`OTP resent email: ${email}`);
 
     res.status(200).json({
       message: "verification code resent",
     });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-
-    logger.error("Resend OTP error:" + message);
-
+  } catch (error) {
+    logger.error("Resend OTP error:" + String(error));
     next(error);
   }
 };
@@ -239,43 +173,31 @@ export const login = async (
   req: Request,
   res: Response,
   next: NextFunction,
-): Promise<Response | void> => {
+) => {
   try {
-    const result: ValidationResult = await LoginValidator(req.body);
+    const { email, password } = req.body as LoginDTO;
 
-    if (result.error) {
-      throw CustomErrorHandler.BadRequest(result.error.message);
-    }
-
-    const { email, password } = result.value as LoginDTO;
-
-    const user = await Auth.findOne({ where: { email: email } });
+    const user = await Auth.findOne({ where: { email } });
 
     if (!user) {
-      logger.warn(`Login attempt with non-existing email: ${email}`);
-
       throw CustomErrorHandler.NotFound("you are not registered");
     }
 
     const decode = await bcrypt.compare(password, user.password);
 
     if (!decode) {
-      logger.warn(`Login attempt with wrong password: ${email}`);
-
       throw CustomErrorHandler.UnAuthorized("Invalid password");
     }
 
-    if (!user.dataValues.isVerified) {
-      logger.warn(`Login attempt with non-verified email: ${email}`);
-
+    if (!user.isVerified) {
       throw CustomErrorHandler.UnAuthorized("you are not verified");
     }
 
     const payload = {
       username: user.username,
       email: user.email,
-      role: user.dataValues.role,
-      id: user.dataValues.id,
+      role: user.role,
+      id: user.id,
     };
 
     const access_token = accessToken(payload);
@@ -291,17 +213,12 @@ export const login = async (
       maxAge: 30 * 24 * 60 * 1000,
     });
 
-    logger.info(`user logged with email: ${email}`);
-
     res.status(200).json({
       message: "Succes",
       access_token,
     });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-
-    logger.error("Login error:" + message);
-
+  } catch (error) {
+    logger.error("Login error:" + String(error));
     next(error);
   }
 };
@@ -312,41 +229,27 @@ export const forgotPassword = async (
   req: Request,
   res: Response,
   next: NextFunction,
-): Promise<Response | void> => {
+) => {
   try {
-    const result: ValidationResult = await ForgotPasswordValidator(req.body);
+    const { email, new_password, otp } = req.body as ForgotPasswordDTO;
 
-    if (result.error) {
-      throw CustomErrorHandler.BadRequest(result.error.message);
-    }
-
-    const { email, new_password, otp } = result.value as ForgotPasswordDTO;
-
-    const user = await Auth.findOne({ where: { email: email } });
+    const user = await Auth.findOne({ where: { email } });
 
     if (!user) {
-      logger.warn(`Forgot password attempt with non-existing email: ${email}`);
-
       throw CustomErrorHandler.UnAuthorized("User not found");
-    } 
+    }
 
     if (!user.dataValues.isVerified) {
-      logger.warn(`Forgot password attempt with non-verified email: ${email}`);
-
       throw CustomErrorHandler.UnAuthorized("user not verified");
     }
 
     const time = Date.now();
 
     if (time > user.dataValues.otpTime) {
-      logger.warn(`Forgot password attempt with expired otp: ${email}`);
-
       throw CustomErrorHandler.BadRequest("OTP time expired");
     }
 
     if (otp !== user.dataValues.otp) {
-      logger.warn(`Forgot password attempt with wrong otp: ${email}`);
-
       throw CustomErrorHandler.BadRequest("wrong verification code");
     }
 
@@ -365,16 +268,11 @@ export const forgotPassword = async (
       },
     );
 
-    logger.info(`user forgot password with email: ${email}`);
-
     res.status(200).json({
       message: "Password changed",
     });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-
-    logger.error("Forgot password error:" + message);
-
+  } catch (error) {
+    logger.error("Forgot password error:" + String(error));
     next(error);
   }
 };
@@ -387,7 +285,6 @@ export const logout = async (
   next: NextFunction,
 ): Promise<Response | void> => {
   try {
-
     res.clearCookie("access_token");
     res.clearCookie("refresh_token");
 

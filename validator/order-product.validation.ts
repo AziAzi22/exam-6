@@ -11,24 +11,6 @@ export const buyProductValidator = async (
     adress: Joi.string().trim().required(),
   }).validate(data, { abortEarly: false });
 
-// cancel product
-
-export const cancelOrderProductValidator = async (
-  data: unknown,
-): Promise<ValidationResult> =>
-  Joi.object({
-    status: Joi.string().trim().required(),
-  }).validate(data, { abortEarly: false });
-
-// update  status product
-
-export const updateStatusOrderProductValidator = async (
-  data: unknown,
-): Promise<ValidationResult> =>
-  Joi.object({
-    status: Joi.string().trim().required(),
-  }).validate(data, { abortEarly: false });
-
 // update  adress product
 
 export const updateAdressOrderProductValidator = async (

@@ -1,44 +1,13 @@
 import type { Request, Response, NextFunction } from "express";
-import {
-  changeEmailValidator,
-  changeBirthYearValidator,
-  changeUsernameValidator,
-  changePasswordValidator,
-  changeAdressValidator,
-} from "../validator/user.validation.js";
 import { CustomErrorHandler } from "../utils/custom-error-handler.js";
 
-// change email validatiim moddleware
-
-export const changeEmailValidatorMiddleware = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  try {
-    await changeEmailValidator(req.body);
-    next();
-  } catch (error: any) {
-    next(CustomErrorHandler.BadRequest(error.message));
-  }
-};
-
-// change password validation moddleware
-
-export const changePasswordValidatorMiddleware = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  try {
-    await changePasswordValidator(req.body);
-    next();
-  } catch (error: any) {
-    next(CustomErrorHandler.BadRequest(error.message));
-  }
-};
-
-// change username validation middleware
+import {
+  changeUsernameValidator,
+  changeBirthYearValidator,
+  changePasswordValidator,
+  changeEmailValidator,
+  changeAdressValidator,
+} from "../validator/user.validation.js";
 
 export const changeUsernameValidatorMiddleware = async (
   req: Request,
@@ -46,14 +15,12 @@ export const changeUsernameValidatorMiddleware = async (
   next: NextFunction,
 ) => {
   try {
-    await changeUsernameValidator(req.body);
+    req.body = await changeUsernameValidator(req.body);
     next();
-  } catch (error: any) {
-    next(CustomErrorHandler.BadRequest(error.message));
+  } catch (error: unknown) {
+    next(CustomErrorHandler.BadRequest((error as Error).message));
   }
 };
-
-/// change birth+year validation middleware
 
 export const changeBirthYearValidatorMiddleware = async (
   req: Request,
@@ -61,28 +28,38 @@ export const changeBirthYearValidatorMiddleware = async (
   next: NextFunction,
 ) => {
   try {
-    await changeBirthYearValidator(req.body);
+    req.body = await changeBirthYearValidator(req.body);
     next();
-  } catch (error: any) {
-    next(CustomErrorHandler.BadRequest(error.message));
+  } catch (error: unknown) {
+    next(CustomErrorHandler.BadRequest((error as Error).message));
   }
 };
 
-// userpic
-
-export const changeUserpicValidatorMiddleware = (
+export const changePasswordValidatorMiddleware = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
-  if (!req.file) {
-    return next(CustomErrorHandler.BadRequest("picture is required"));
+  try {
+    req.body = await changePasswordValidator(req.body);
+    next();
+  } catch (error: unknown) {
+    next(CustomErrorHandler.BadRequest((error as Error).message));
   }
-
-  next();
 };
 
-// change adress
+export const changeEmailValidatorMiddleware = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    req.body = await changeEmailValidator(req.body);
+    next();
+  } catch (error: unknown) {
+    next(CustomErrorHandler.BadRequest((error as Error).message));
+  }
+};
 
 export const changeAdressValidatorMiddleware = async (
   req: Request,
@@ -90,10 +67,9 @@ export const changeAdressValidatorMiddleware = async (
   next: NextFunction,
 ) => {
   try {
-    await changeAdressValidator(req.body);
-
+    req.body = await changeAdressValidator(req.body);
     next();
-  } catch (error: any) {
-    next(CustomErrorHandler.BadRequest(error.message));
+  } catch (error: unknown) {
+    next(CustomErrorHandler.BadRequest((error as Error).message));
   }
 };

@@ -11,7 +11,7 @@ export const saveProduct = async (
   req: Request,
   res: Response,
   next: NextFunction,
-) => {
+) => { 
   try {
     const { id: productId } = req.params;
 
