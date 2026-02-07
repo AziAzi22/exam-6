@@ -15,14 +15,12 @@ export const saveProduct = async (
   try {
     const { id: productId } = req.params;
 
-    const newId = Number(productId);
-    console.log(newId);
-    console.log(req.params);
+    const newId = Number(productId as string);
 
     const product = await Product.findByPk(newId);
 
     const userId = req.user!.id;
-
+ 
     if (isNaN(newId)) {
       throw CustomErrorHandler.BadRequest("Invalid product id");
     }
