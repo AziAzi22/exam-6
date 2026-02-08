@@ -29,18 +29,18 @@ categoryRouter.get(
 );
 categoryRouter.post(
   "/add_category",
-  upload.single("image"),
   authorization,
   checkAdmin,
   CreateCategoryValidatorMiddleware,
+  upload.single("image"),
   createCategory as RequestHandler,
 );
 categoryRouter.put(
   "/update_category/:id",
-  upload.single("image"),
   authorization,
   checkAdmin,
   UpdateCategoryValidatorMiddleware,
+  upload.single("image"),
   updateCategory as RequestHandler,
 );
 categoryRouter.delete(

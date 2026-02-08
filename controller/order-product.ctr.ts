@@ -14,7 +14,7 @@ OrderProduct.sync({ force: false });
 
 export const buyPoduct = async (
   req: Request,
-  res: Response, 
+  res: Response,
   next: NextFunction,
 ): Promise<Response | void> => {
   try {
@@ -38,11 +38,13 @@ export const buyPoduct = async (
       throw CustomErrorHandler.NotFound("Product not found");
     }
 
-    if (foundedProduct.quantity < quantity) {
+    const productData = foundedProduct.get();
+
+    if (productData.quantity < quantity) {
       throw CustomErrorHandler.BadRequest("Not enough products in stock");
     }
 
-    const totalPrice = foundedProduct.price * quantity;
+    const totalPrice = Number(productData.price) * Number(quantity);
 
     await OrderProduct.create({
       userId: userId,
@@ -55,7 +57,7 @@ export const buyPoduct = async (
     });
 
     await Product.update(
-      { quantity: foundedProduct.quantity - quantity },
+      { quantity: productData.quantity - quantity },
       { where: { id: newID } },
     );
 
@@ -104,7 +106,6 @@ export const cancelOrderProduct = async (
 ) => {
   try {
     const userId = req.user!.id;
-
     const { id } = req.params;
 
     const newID = Number(id as string);
@@ -114,50 +115,43 @@ export const cancelOrderProduct = async (
     }
 
     const orderProduct = await OrderProduct.findOne({
-      where: {
-        id: newID,
-        userId,
-      },
+      where: { id: newID, userId },
     });
 
     if (!orderProduct) {
       throw CustomErrorHandler.NotFound("Order product not found");
     }
 
-    if (orderProduct.status !== "pending") {
+    const orderData = orderProduct.get();
+
+    if (orderData.status !== "pending") {
       throw CustomErrorHandler.BadRequest("You can cancel only pending orders");
     }
 
     const product = await Product.findOne({
-      where: { id: orderProduct.productId },
+      where: { id: orderData.productId },
     });
+
+    if (!product) {
+      throw CustomErrorHandler.NotFound("Product not found");
+    }
+
+    const productData = product.get();
 
     await Product.update(
       {
-        quantity: product!.quantity + orderProduct.quantity,
+        quantity: productData.quantity + orderData.quantity,
       },
-      { where: { id: orderProduct.productId } },
+      { where: { id: orderData.productId } },
     );
 
-    await OrderProduct.update(
-      {
-        status: "canceled",
-      },
-      {
-        where: {
-          id: newID,
-        },
-      },
-    );
+    await OrderProduct.update({ status: "cancelled" }, { where: { id: newID } });
 
     res.status(200).json({
       message: "Order product canceled",
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-
-    logger.error("Cancel order product error:" + message);
-
+    logger.error("Cancel order product error:" + String(error));
     next(error);
   }
 };
@@ -171,7 +165,6 @@ export const deliveredProduct = async (
 ) => {
   try {
     const userId = req.user!.id;
-
     const { id } = req.params;
 
     const newID = Number(id as string);
@@ -181,24 +174,26 @@ export const deliveredProduct = async (
     }
 
     const orderProduct = await OrderProduct.findOne({
-      where: {
-        id: newID,
-        userId,
-      },
+      where: { id: newID, userId },
     });
 
     if (!orderProduct) {
       throw CustomErrorHandler.NotFound("Order product not found");
     }
 
+    const orderData = orderProduct.get();
+
+    if (orderData.status !== "pending") {
+      throw CustomErrorHandler.BadRequest(
+        "Only pending orders can be delivered",
+      );
+    }
+
     await orderProduct.update({ status: "delivered" });
 
     res.status(200).json({ message: "Order product delivered" });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-
-    logger.error("Update status order product error:" + message);
-
+    logger.error("Update status order product error:" + String(error));
     next(error);
   }
 };
@@ -212,7 +207,6 @@ export const updateAdressOrderProduct = async (
 ) => {
   try {
     const userId = req.user!.id;
-
     const { id } = req.params;
 
     const newID = Number(id as string);
@@ -222,17 +216,16 @@ export const updateAdressOrderProduct = async (
     }
 
     const orderProduct = await OrderProduct.findOne({
-      where: {
-        id: newID,
-        userId,
-      },
+      where: { id: newID, userId },
     });
 
     if (!orderProduct) {
       throw CustomErrorHandler.NotFound("Order product not found");
     }
 
-    if (orderProduct.status !== "pending") {
+    const orderData = orderProduct.get();
+
+    if (orderData.status !== "pending") {
       throw CustomErrorHandler.BadRequest(
         "You can update order only when status is pending",
       );
@@ -240,18 +233,13 @@ export const updateAdressOrderProduct = async (
 
     const { adress } = req.body as updateAdressOrderProductDTO;
 
-    await orderProduct.update({
-      adress: adress,
-    });
+    await orderProduct.update({ adress });
 
     res.status(200).json({
       message: "Adress updated",
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-
-    logger.error("Update adress order product error:" + message);
-
+    logger.error("Update adress order product error:" + String(error));
     next(error);
   }
 };
@@ -260,12 +248,11 @@ export const updateAdressOrderProduct = async (
 
 export const updatePaymentMethodOrderProduct = async (
   req: Request,
-  res: Response,
+  res: Response, 
   next: NextFunction,
 ) => {
   try {
     const userId = req.user!.id;
-
     const { id } = req.params;
 
     const newID = Number(id as string);
@@ -275,17 +262,16 @@ export const updatePaymentMethodOrderProduct = async (
     }
 
     const orderProduct = await OrderProduct.findOne({
-      where: {
-        id: newID,
-        userId,
-      },
+      where: { id: newID, userId },
     });
 
     if (!orderProduct) {
       throw CustomErrorHandler.NotFound("Order product not found");
     }
 
-    if (orderProduct.status !== "pending") {
+    const orderData = orderProduct.get();
+
+    if (orderData.status !== "pending") {
       throw CustomErrorHandler.BadRequest(
         "You can update order only when status is pending",
       );
@@ -294,17 +280,14 @@ export const updatePaymentMethodOrderProduct = async (
     const { paymentMethod } = req.body as updatePaymentMethodOrderProductDTO;
 
     await orderProduct.update({
-      paymentMethod: paymentMethod,
+      paymentMethod,
     });
 
     res.status(200).json({
       message: "Payment method updated",
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-
-    logger.error("Update payment method product error:" + message);
-
+    logger.error("Update payment method product error:" + String(error));
     next(error);
   }
 };

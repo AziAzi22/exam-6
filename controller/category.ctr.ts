@@ -8,6 +8,7 @@ import { CustomErrorHandler } from "../utils/custom-error-handler.js";
 import { Category, Product } from "../model/association.js";
 import { getPagination } from "../utils/pagination.js";
 import { Op } from "sequelize";
+import { removeFile } from "../utils/file-remove.js";
 
 Category.sync({ force: false });
 
@@ -133,13 +134,10 @@ export const getOneCategory = async (
       data: products,
     });
   } catch (error: unknown) {
-    logger.error(
-      "Get category by id error: " + (error as Error).message,
-    );
+    logger.error("Get category by id error: " + (error as Error).message);
     next(error);
   }
 };
-
 
 /// update category
 
@@ -161,11 +159,13 @@ export const updateCategory = async (
 
     const { title } = req.body as UpdateCategoryDTO;
 
-    if (!req.file) {
-      throw CustomErrorHandler.BadRequest("image file is required");
-    }
+    let path = category.imageUrl;
 
-    const path = "/upload/images/" + req.file.filename;
+    if (req.file) {
+      removeFile(category.imageUrl);
+
+      path = "/upload/images/" + req.file.filename;
+    }
 
     await category.update({ title, imageUrl: path });
 
@@ -196,6 +196,8 @@ export const deleteCategory = async (
     if (!category) {
       throw CustomErrorHandler.NotFound("category not found");
     }
+
+    removeFile(category.imageUrl);
 
     await category.destroy();
 

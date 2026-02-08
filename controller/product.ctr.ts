@@ -5,6 +5,7 @@ import { CustomErrorHandler } from "../utils/custom-error-handler.js";
 import { Product } from "../model/association.js";
 import { Op } from "sequelize";
 import { getPagination } from "../utils/pagination.js";
+import { removeFile } from "../utils/file-remove.js";
 
 Product.sync({ force: false });
 
@@ -21,8 +22,6 @@ export const createProduct = async (
 
     const adminId = req.user!.id;
 
-    const files = req.files as { [fieldName: string]: Express.Multer.File[] };
-
     const exists = await Product.findOne({
       where: {
         title: title,
@@ -32,6 +31,8 @@ export const createProduct = async (
     if (exists) {
       throw CustomErrorHandler.AlreadyExist("product already exists");
     }
+
+    const files = req.files as { [fieldName: string]: Express.Multer.File[] };
 
     if (!files || !files["image"]?.length) {
       throw CustomErrorHandler.BadRequest("at least one image is needed");
@@ -175,21 +176,33 @@ export const updateProduct = async (
       | { [fieldName: string]: Express.Multer.File[] }
       | undefined;
 
-    const imageOneUrl = files?.["image"]?.[0]?.filename
-      ? "/upload/images/" + files["image"][0].filename
-      : product.imageOneUrl;
+    let imageOneUrl = product.imageOneUrl;
 
-    const imageTwoUrl = files?.["image_two"]?.[0]?.filename
-      ? "/upload/images/" + files["image_two"][0].filename
-      : product.imageTwoUrl;
+    if (files?.["image"]?.[0]) {
+      removeFile(product.imageOneUrl);
+      imageOneUrl = "/upload/images/" + files["image"][0].filename;
+    }
 
-    const imageThreeUrl = files?.["image_three"]?.[0]?.filename
-      ? "/upload/images/" + files["image_three"][0].filename
-      : product.imageThreeUrl;
+    let imageTwoUrl = product.imageTwoUrl;
 
-    const imageFourUrl = files?.["image_four"]?.[0]?.filename
-      ? "/upload/images/" + files["image_four"][0].filename
-      : product.imageFourUrl;
+    if (files?.["image_two"]?.[0]) {
+      removeFile(product.imageTwoUrl);
+      imageTwoUrl = "/upload/images/" + files["image_two"][0].filename;
+    }
+
+    let imageThreeUrl = product.imageThreeUrl;
+
+    if (files?.["image_three"]?.[0]) {
+      removeFile(product.imageThreeUrl);
+      imageThreeUrl = "/upload/images/" + files["image_three"][0].filename;
+    }
+
+    let imageFourUrl = product.imageFourUrl;
+
+    if (files?.["image_four"]?.[0]) {
+      removeFile(product.imageFourUrl);
+      imageFourUrl = "/upload/images/" + files["image_four"][0].filename;
+    }
 
     await product.update({
       title,
@@ -232,6 +245,11 @@ export const deleteProduct = async (
     if (!product) {
       throw CustomErrorHandler.NotFound("product not found");
     }
+
+    removeFile(product.imageOneUrl);
+    removeFile(product.imageTwoUrl);
+    removeFile(product.imageThreeUrl);
+    removeFile(product.imageFourUrl);
 
     await product.destroy();
 

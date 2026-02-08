@@ -30,26 +30,26 @@ productRouter.post(
   "/add_product",
   authorization,
   checkAdmin,
+  CreateProductValidatorMiddleware,
   upload.fields([
     { name: "image", maxCount: 1 },
     { name: "image_two", maxCount: 1 },
     { name: "image_three", maxCount: 1 },
     { name: "image_four", maxCount: 1 },
   ]),
-  CreateProductValidatorMiddleware,
   createProduct as RequestHandler,
 );
 productRouter.put(
   "/update_product/:id",
   authorization,
   checkAdmin,
+  UpdateProductValidatorMiddleware,
   upload.fields([
     { name: "image", maxCount: 1 },
     { name: "image_two", maxCount: 1 },
     { name: "image_three", maxCount: 1 },
     { name: "image_four", maxCount: 1 },
   ]),
-  UpdateProductValidatorMiddleware,
   updateProduct as RequestHandler,
 );
 productRouter.delete(
