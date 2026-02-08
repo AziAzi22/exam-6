@@ -176,31 +176,31 @@ export const updateProduct = async (
       | { [fieldName: string]: Express.Multer.File[] }
       | undefined;
 
-    let imageOneUrl = product.imageOneUrl;
+    let imageOneUrl = product.dataValues.imageOneUrl;
 
     if (files?.["image"]?.[0]) {
-      removeFile(product.imageOneUrl);
+      removeFile(product.dataValues.imageOneUrl);
       imageOneUrl = "/upload/images/" + files["image"][0].filename;
     }
 
-    let imageTwoUrl = product.imageTwoUrl;
+    let imageTwoUrl = product.dataValues.imageTwoUrl;
 
     if (files?.["image_two"]?.[0]) {
-      removeFile(product.imageTwoUrl);
+      removeFile(product.dataValues.imageTwoUrl);
       imageTwoUrl = "/upload/images/" + files["image_two"][0].filename;
     }
 
-    let imageThreeUrl = product.imageThreeUrl;
+    let imageThreeUrl = product.dataValues.imageThreeUrl;
 
     if (files?.["image_three"]?.[0]) {
-      removeFile(product.imageThreeUrl);
+      removeFile(product.dataValues.imageThreeUrl);
       imageThreeUrl = "/upload/images/" + files["image_three"][0].filename;
     }
 
-    let imageFourUrl = product.imageFourUrl;
+    let imageFourUrl = product.dataValues.imageFourUrl;
 
     if (files?.["image_four"]?.[0]) {
-      removeFile(product.imageFourUrl);
+      removeFile(product.dataValues.imageFourUrl);
       imageFourUrl = "/upload/images/" + files["image_four"][0].filename;
     }
 
@@ -246,10 +246,10 @@ export const deleteProduct = async (
       throw CustomErrorHandler.NotFound("product not found");
     }
 
-    removeFile(product.imageOneUrl);
-    removeFile(product.imageTwoUrl);
-    removeFile(product.imageThreeUrl);
-    removeFile(product.imageFourUrl);
+    removeFile(product.dataValues.imageOneUrl);
+    removeFile(product.dataValues.imageTwoUrl);
+    removeFile(product.dataValues.imageThreeUrl);
+    removeFile(product.dataValues.imageFourUrl);
 
     await product.destroy();
 

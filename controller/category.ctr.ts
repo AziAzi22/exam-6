@@ -159,16 +159,16 @@ export const updateCategory = async (
 
     const { title } = req.body as UpdateCategoryDTO;
 
-    let path = category.imageUrl;
+    let path = category.dataValues.imageUrl;
 
     if (req.file) {
-      removeFile(category.imageUrl);
+      removeFile(category.dataValues.imageUrl);
 
       path = "/upload/images/" + req.file.filename;
     }
 
     await category.update({ title, imageUrl: path });
-
+ 
     res.status(200).json({ message: "category updated" });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
@@ -197,7 +197,7 @@ export const deleteCategory = async (
       throw CustomErrorHandler.NotFound("category not found");
     }
 
-    removeFile(category.imageUrl);
+    removeFile(category.dataValues.imageUrl);
 
     await category.destroy();
 

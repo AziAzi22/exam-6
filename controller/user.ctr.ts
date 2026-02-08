@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { CustomErrorHandler } from "../utils/custom-error-handler.js";
 import logger from "../utils/logger.js";
 import { Auth } from "../model/association.js";
+import { removeFile } from "../utils/file-remove.js";
 
 // GET PROFILE
 
@@ -17,7 +18,7 @@ export const getProfile = async (
     if (!user) {
       throw CustomErrorHandler.NotFound("User not found");
     }
- 
+
     res.status(200).json({
       id: user.id,
       username: user.username,
@@ -43,9 +44,16 @@ export const changeUsername = async (
   try {
     const { username } = req.body;
 
-    await Auth.update({ username }, { where: { id: req.user!.id } });
+    const user = await Auth.findByPk(req.user!.id);
+    if (!user) {
+      throw CustomErrorHandler.NotFound("User not found");
+    }
 
-    logger.info(`username updated userId=${req.user!.id}`);
+    const userData = user.get();
+
+    await user.update({ username });
+
+    logger.info(`username updated userId=${userData.id}`);
 
     res.status(200).json({ message: "username updated" });
   } catch (error: unknown) {
@@ -64,7 +72,16 @@ export const changeBirthYear = async (
   try {
     const { birth_year } = req.body;
 
-    await Auth.update({ birth_year }, { where: { id: req.user!.id } });
+    const user = await Auth.findByPk(req.user!.id);
+    if (!user) {
+      throw CustomErrorHandler.NotFound("User not found");
+    }
+
+    const userData = user.get();
+
+    await user.update({ birth_year });
+
+    logger.info(`birth_year updated userId=${userData.id}`);
 
     res.status(200).json({ message: "birth_year updated" });
   } catch (error: unknown) {
@@ -89,6 +106,8 @@ export const changePassword = async (
       throw CustomErrorHandler.NotFound("User not found");
     }
 
+    const userData = user.get();
+
     if (new_password !== confirm_password) {
       throw CustomErrorHandler.BadRequest("Passwords do not match");
     }
@@ -97,7 +116,7 @@ export const changePassword = async (
       throw CustomErrorHandler.BadRequest("New password must be different");
     }
 
-    const match = await bcrypt.compare(current_password, user.password);
+    const match = await bcrypt.compare(current_password, userData.password);
 
     if (!match) {
       throw CustomErrorHandler.UnAuthorized("Invalid password");
@@ -126,15 +145,13 @@ export const changeEmail = async (
       req.body;
 
     const user = await Auth.findByPk(req.user!.id);
-
     if (!user) {
       throw CustomErrorHandler.NotFound("User not found");
     }
 
-    const emailExists = await Auth.findOne({
-      where: { email: new_email },
-    });
+    const userData = user.get();
 
+    const emailExists = await Auth.findOne({ where: { email: new_email } });
     if (emailExists) {
       throw CustomErrorHandler.BadRequest("email already exists");
     }
@@ -151,15 +168,14 @@ export const changeEmail = async (
       );
     }
 
-    const match = await bcrypt.compare(old_password, user.password);
-
+    const match = await bcrypt.compare(old_password, userData.password);
     if (!match) {
       throw CustomErrorHandler.UnAuthorized("Invalid password");
     }
 
     const hash = await bcrypt.hash(new_password, 14);
 
-    const oldEmail = user.email;
+    const oldEmail = userData.email;
 
     await user.update({
       email: new_email,
@@ -173,7 +189,7 @@ export const changeEmail = async (
     res.clearCookie("refresh_token");
 
     res.status(200).json({
-      message: "email changed please verify your new email",
+      message: "email changed, please verify your new email",
     });
   } catch (error: unknown) {
     logger.error("change email error: " + (error as Error).message);
@@ -194,6 +210,18 @@ export const changeUserpic = async (
     }
 
     const path = "../upload/images/" + req.file.filename;
+
+    const user = await Auth.findByPk(req.user!.id);
+
+    if (!user) {
+      throw CustomErrorHandler.NotFound("User not found");
+    }
+
+    const userData = user.get();
+
+    if (userData.userpic) {
+      removeFile(userData.userpic);
+    }
 
     await Auth.update({ userpic: path }, { where: { id: req.user!.id } });
 
@@ -218,12 +246,15 @@ export const changeAdress = async (
     const { adress } = req.body;
 
     const user = await Auth.findByPk(req.user!.id);
-
     if (!user) {
       throw CustomErrorHandler.NotFound("User not found");
     }
 
+    const userData = user.get();
+
     await user.update({ adress });
+
+    logger.info(`adress updated userId=${userData.id}`);
 
     res.status(200).json({ message: "adress changed" });
   } catch (error: unknown) {
